@@ -1,0 +1,3 @@
+{
+	"cmd": ["\\gd\\bin\\go-buildrun.exe", "-f=$file"]
+}
