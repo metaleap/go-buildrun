@@ -131,12 +131,29 @@ func main () {
 		allowRun = false
 		fmt.Printf("%+v\n", err)
 	}
-	if allowRun && hasDocGoFile && *flagGenDocHtml && !isMainPkg {
-		var docTemplate = "<html><head><meta charset=\"UTF-8\"/><title>Package %s</title></head><body><h1>Package %s</h1>%s</body></html>"
+	if allowRun && (hasDocGoFile || strings.Contains(goInstPath, "metaleap/go-xsd-pkg")) && *flagGenDocHtml && !isMainPkg {
+		var docTemplate = `<html>
+	<head>
+		<title>Package %s</title>
+		<meta charset="UTF-8" />
+		<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+		<link type="text/css" rel="stylesheet" href="http://golang.org/doc/style.css" />
+		<script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jquery/1.8.2/jquery.min.js"></script>
+		<script type="text/javascript" src="http://golang.org/doc/godocs.js"></script>
+	</head>
+	<body>
+		<div id="page" class="wide">
+		<div class="container">
+		<h1>Package %s</h1>
+		<div id="nav"></div>
+		%s
+		</div></div>
+	</body>
+</html>`
 		log.Printf("RUN: godoc -html=true %v\n", goInstPath)
-		if rawBytes, err = ioutil.ReadFile(filepath.Join(goPath, "src/github.com/metaleap/go-buildrun/doctemplate.html")); (err == nil) && (len(rawBytes) > 0) {
-			docTemplate = string(rawBytes)
-		}
+		// if rawBytes, err = ioutil.ReadFile(filepath.Join(goPath, "src/github.com/metaleap/go-buildrun/doctemplate.html")); (err == nil) && (len(rawBytes) > 0) {
+		// 	docTemplate = string(rawBytes)
+		// }
 		if rawBytes, err = exec.Command("godoc", "-html=true", goInstPath).CombinedOutput(); err != nil {
 			log.Printf("GODOC error: %v\n", err)
 		} else if err = ioutil.WriteFile(filepath.Join(filepath.Dir(origFilePath), "doc.html"), []byte(fmt.Sprintf(docTemplate, goInstPath, goInstPath, string(rawBytes))), os.ModePerm); err != nil {

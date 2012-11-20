@@ -50,4 +50,4 @@ The .gt.go **template consumer file** is a normal Go source file that can design
     var myObjs = MyObjectSlice {}
 
 
-That's it. Everytime the package is built with *go-buildrun*, all **#begin-gt ... #end-gt** portions in all .gt.go source files are regenerated from the template and replacement parameter their **#begin-gt** directive specifies.
+That's it. Every time the package is re-built with *go-buildrun*, all **#begin-gt ... #end-gt** portions in all .gt.go source files are regenerated from the .gt template-file and replacement-parameters specified in their **#begin-gt** directive.
