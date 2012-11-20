@@ -5,15 +5,18 @@ This small and simple tool is for "slightly-augmented" integration of the **go i
 
 (As you probably know, "go install" is a neat command: it only rebuilds/relinks those dependencies that have actually changed at the source code level since their last build. Perfect for many quick fire-and-forget "build-and-run" cycles from your IDE or editor.)
 
-A single command-line argument **-f** is given to the tool, the .go source to "build" (go install) from. (See my included go-buildrun.sublime-build for example.)
+1. A command-line argument **-f** is given to the tool, the .go source to "build" (go install) from. (See my included go-buildrun.sublime-build for example.)
 
-As the name "buildrun" implies, it is to "build and, if applicable, run". So it checks if the current .go source file is a main package, if so, the compiled program is run immediately when "go install" returns with no errors.
+2. As the name "buildrun" implies, it is to "build and, if applicable, run". So it checks if the current .go source file is a main package, if so, the compiled program is run immediately when "go install" returns with no errors.
 
 However, **prior** to invoking "go install":
 
 - IF the current package directory contains any **.gt** and **.gt.go** files, the tool applies those *.gt* template definitions to the *.gt.go* source files. See "Templating" section below.
 
 - IF the package directory, or any of its ancestor directories (up to but not including $GOPATH) contains a *.go-buildrun* text file, it executes the command specified in that file's single line, with a single argument (remember, in your custom tool, that will be *os.Args[1]* rather than 0, which is the executable file path itself) --- the full directory path that this *.go-buildrun* text file resides in (not the executable itself, which is most likely in your $GOPATH/bin folder).
+
+
+IF the command-line argument **-d** is *true*, the package is not a main package AND contains a *doc.go* source file, then upon successful build **godoc** is run to generate a single **doc.html** package documentation file in the package directory.
 
 
 Templating

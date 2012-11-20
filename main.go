@@ -4,9 +4,11 @@ import (
 	"flag"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"path/filepath"
 	"os"
 	"os/exec"
+	"runtime"
 	"strings"
 	"time"
 )
@@ -24,7 +26,7 @@ func checkForMainPackage (filePath string) bool {
 	return false
 }
 
-func processTemplates (dirPath string) {
+func processTemplates (dirPath string) (hasDocGoFile bool) {
 	const begin, end, pkg = "//#begin-gt", "//#end-gt", "package gt\n"
 	var (
 		rawBytes []byte
@@ -44,6 +46,8 @@ func processTemplates (dirPath string) {
 				tmpl = string(rawBytes)
 				if posBegin = strings.Index(tmpl, pkg); posBegin >= 0 { tmpl = tmpl[len(pkg) :] }
 				templates[fi.Name()] = "\n" + tmpl + "\n"
+			} else if strings.ToLower(fi.Name()) == "doc.go" {
+				hasDocGoFile = true
 			}
 		}
 	}
@@ -70,6 +74,7 @@ func processTemplates (dirPath string) {
 			}
 		}
 	}
+	return
 }
 
 func trimLines (str string, maxLines int) string {
@@ -83,20 +88,22 @@ func main () {
 	var (
 		startTime = time.Now()
 		pathSep = string(os.PathSeparator)
-		flagFilePath = flag.String("f", "", "file: current .go source file from which to build")
+		flagFilePath = flag.String("f", "", "full path to current .go source file from which to build (go install) package")
+		flagGenDocHtml = flag.Bool("d", false, "generate doc.html in package directory?")
 		goInstPath string
 		goPath = os.ExpandEnv("$GOPATH")
-		isMainPkg bool
+		isMainPkg, hasDocGoFile bool
 		origFilePath, cmdRunPath string
 		rawBytes []byte
 		err error
 		allowRun = true
 		dirFiles []os.FileInfo
 	)
+	runtime.LockOSThread()
 	flag.Parse()
 	origFilePath = *flagFilePath
 	isMainPkg = checkForMainPackage(origFilePath)
-	processTemplates(filepath.Dir(origFilePath))
+	hasDocGoFile = processTemplates(filepath.Dir(origFilePath))
 	goInstPath = strings.Replace(origFilePath [len(filepath.Join(goPath, "src") + pathSep) : ], pathSep, "/", -1)
 	goInstPath = goInstPath [0 : strings.LastIndex(goInstPath, "/")]
 	for dp := filepath.Dir(origFilePath); len(dp) > len(goPath); dp = filepath.Dir(dp) {
@@ -104,7 +111,9 @@ func main () {
 		for _, fi := range dirFiles {
 			if (!fi.IsDir()) && strings.HasSuffix(fi.Name(), ".go-buildrun") {
 				if rawBytes, err = ioutil.ReadFile(filepath.Join(dp, fi.Name())); err != nil { panic(err) }
-				if rawBytes, err = exec.Command(strings.Trim(string(rawBytes), " \t\r\n"), dp).CombinedOutput(); err != nil { panic(err) }
+				cmdRunPath = strings.Trim(string(rawBytes), " \t\r\n")
+				log.Printf("RUN: %v\n", cmdRunPath)
+				if rawBytes, err = exec.Command(cmdRunPath, dp).CombinedOutput(); err != nil { panic(err) }
 				if len(rawBytes) > 0 {
 					fmt.Printf("%v", string(rawBytes))
 				}
@@ -112,6 +121,7 @@ func main () {
 			}
 		}
 	}
+	log.Printf("RUN: go install %v\n", goInstPath)
 	rawBytes, err = exec.Command("go", "install", goInstPath).CombinedOutput()
 	if len(rawBytes) > 0 {
 		allowRun = false
@@ -121,11 +131,24 @@ func main () {
 		allowRun = false
 		fmt.Printf("%+v\n", err)
 	}
-	fmt.Printf("TOTAL BUILD TIME: %v\n", time.Now().Sub(startTime))
+	if allowRun && hasDocGoFile && *flagGenDocHtml && !isMainPkg {
+		var docTemplate = "<html><head><meta charset=\"UTF-8\"/><title>Package %s</title></head><body><h1>Package %s</h1>%s</body></html>"
+		log.Printf("RUN: godoc -html=true %v\n", goInstPath)
+		if rawBytes, err = ioutil.ReadFile(filepath.Join(goPath, "src/github.com/metaleap/go-buildrun/doctemplate.html")); (err == nil) && (len(rawBytes) > 0) {
+			docTemplate = string(rawBytes)
+		}
+		if rawBytes, err = exec.Command("godoc", "-html=true", goInstPath).CombinedOutput(); err != nil {
+			log.Printf("GODOC error: %v\n", err)
+		} else if err = ioutil.WriteFile(filepath.Join(filepath.Dir(origFilePath), "doc.html"), []byte(fmt.Sprintf(docTemplate, goInstPath, goInstPath, string(rawBytes))), os.ModePerm); err != nil {
+			log.Printf("DOC file write error: %v\n", err)
+		}
+	}
+	log.Printf("TOTAL BUILD TIME: %v\n", time.Now().Sub(startTime))
 	if (allowRun && isMainPkg) {
 		cmdRunPath = filepath.Join(goPath, "bin", goInstPath [strings.LastIndex(goInstPath, "/") + 1 : ])
+		log.Printf("RUN: %v\n", cmdRunPath)
 		rawBytes, err = exec.Command(cmdRunPath).CombinedOutput()
 		if len(rawBytes) > 0 { fmt.Printf("%v\n", trimLines(string(rawBytes), 10)) }
-		if err != nil { fmt.Printf("%+v\n", err) }
+		if err != nil { log.Printf("ERROR: %+v\n", err) }
 	}
 }
