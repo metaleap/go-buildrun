@@ -14,14 +14,11 @@ import (
 )
 
 func checkForMainPackage(filePath string) bool {
-	var err error
-	var rawBytes []byte
-	var tmp string
 	if strings.Index(filePath, "go-buildrun") >= 0 {
 		panic("go-buildrun tool cannot build itself!")
 	}
-	if rawBytes, err = ioutil.ReadFile(filePath); err == nil {
-		if tmp = string(rawBytes); strings.HasPrefix(tmp, "package main\n") || strings.HasPrefix(tmp, "package main\r") || strings.Contains(tmp, "\npackage main\n") || strings.Contains(tmp, "\npackage main\r") {
+	if rawBytes, err := ioutil.ReadFile(filePath); err == nil {
+		if tmp := string(rawBytes); strings.HasPrefix(tmp, "package main\n") || strings.HasPrefix(tmp, "package main\r") || strings.Contains(tmp, "\npackage main\n") || strings.Contains(tmp, "\npackage main\r") {
 			return true
 		}
 	} else {
