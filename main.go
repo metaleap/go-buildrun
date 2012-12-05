@@ -70,7 +70,7 @@ func processTemplates(dirPath string) (hasDocGoFile bool) {
 					curBefore, curAfter, curLine = cur[:posBegin], cur[posEnd:], cur[posBegin:posCrlf]
 					if parts = strings.Split(curLine, " "); len(parts) > 1 {
 						if tmpl = templates[parts[1]]; len(tmpl) == 0 {
-							tmpl = fmt.Sprintf("\nTEMPLATE NOT FOUND: %v\n", parts[1])
+							tmpl = fmt.Sprintf("\nTEMPLATE NOT FOUND: %s\n", parts[1])
 						}
 						for _, rp := range parts[2:] {
 							if repl = strings.Split(rp, ":"); len(repl) > 1 {
@@ -130,22 +130,22 @@ func main() {
 					panic(err)
 				}
 				cmdRunPath = strings.Trim(string(rawBytes), " \t\r\n")
-				log.Printf("RUN: %v\n", cmdRunPath)
+				log.Printf("RUN: %s\n", cmdRunPath)
 				if rawBytes, err = exec.Command(cmdRunPath, dp).CombinedOutput(); err != nil {
 					panic(err)
 				}
 				if len(rawBytes) > 0 {
-					fmt.Printf("%v", string(rawBytes))
+					fmt.Printf("%s", string(rawBytes))
 				}
 				break
 			}
 		}
 	}
-	log.Printf("RUN: go install %v\n", goInstPath)
+	log.Printf("RUN: go install %s\n", goInstPath)
 	rawBytes, err = exec.Command("go", "install", goInstPath).CombinedOutput()
 	if len(rawBytes) > 0 {
 		allowRun = false
-		fmt.Printf("%v\n", trimLines(string(rawBytes), 5))
+		fmt.Printf("%s\n", trimLines(string(rawBytes), 5))
 	}
 	if err != nil {
 		allowRun = false
@@ -170,7 +170,7 @@ func main() {
 		</div></div>
 	</body>
 </html>`
-		log.Printf("RUN: godoc -html=true %v\n", goInstPath)
+		log.Printf("RUN: godoc -html=true %s\n", goInstPath)
 		// if rawBytes, err = ioutil.ReadFile(filepath.Join(goPath, "src/github.com/metaleap/go-buildrun/doctemplate.html")); (err == nil) && (len(rawBytes) > 0) {
 		// 	docTemplate = string(rawBytes)
 		// }
@@ -183,10 +183,10 @@ func main() {
 	log.Printf("TOTAL BUILD TIME: %v\n", time.Now().Sub(startTime))
 	if allowRun && isMainPkg {
 		cmdRunPath = filepath.Join(goPath, "bin", goInstPath[strings.LastIndex(goInstPath, "/")+1:])
-		log.Printf("RUN: %v\n", cmdRunPath)
+		log.Printf("RUN: %s\n%s\n\n", cmdRunPath, strings.Repeat("_", 25+len(cmdRunPath)))
 		rawBytes, err = exec.Command(cmdRunPath).CombinedOutput()
 		if len(rawBytes) > 0 {
-			fmt.Printf("%v\n", trimLines(string(rawBytes), 10))
+			fmt.Printf("%s\n", trimLines(string(rawBytes), 10))
 		}
 		if err != nil {
 			log.Printf("ERROR: %+v\n", err)
