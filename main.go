@@ -112,6 +112,7 @@ func main() {
 		err                      error
 		allowRun                 = true
 		dirFiles                 []os.FileInfo
+		cmdArgs                  []string
 	)
 	runtime.LockOSThread()
 	flag.Parse()
@@ -129,15 +130,16 @@ func main() {
 				if rawBytes, err = ioutil.ReadFile(filepath.Join(dp, fi.Name())); err != nil {
 					panic(err)
 				}
-				cmdRunPath = strings.Trim(string(rawBytes), " \t\r\n")
+				cmdRunPath = strings.Replace(strings.Trim(string(rawBytes), " \t\r\n"), "$dir", dp, -1)
 				log.Printf("RUN: %s\n", cmdRunPath)
-				if rawBytes, err = exec.Command(cmdRunPath, dp).CombinedOutput(); err != nil {
-					panic(err)
-				}
+				cmdArgs = strings.Split(cmdRunPath, " ")
+				rawBytes, err = exec.Command(cmdArgs[0], cmdArgs[1:]...).CombinedOutput()
 				if len(rawBytes) > 0 {
 					fmt.Printf("%s", string(rawBytes))
 				}
-				break
+				if err != nil {
+					panic(err)
+				}
 			}
 		}
 	}
