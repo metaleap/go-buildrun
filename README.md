@@ -13,7 +13,7 @@ However, **prior** to invoking "go install":
 
 - IF the current package directory contains any **.gt** and **.gt.go** files, the tool applies those *.gt* template definitions to the *.gt.go* source files. See "Templating" section below.
 
-- IF the package directory, or any of its ancestor directories (up to but not including $GOPATH) contains a *.go-buildrun* text file, it executes the command specified in that file's single line, with a single argument (remember, in your custom tool, that will be *os.Args[1]* rather than 0, which is the executable file path itself) --- the full directory path that this *.go-buildrun* text file resides in (not the executable itself, which is most likely in your $GOPATH/bin folder).
+- IF the package directory, or any of its ancestor directories (up to but not including $GOPATH), or both/some/all, contains any *.go-buildrun* text files, then for each such file, it executes the command-with-args specified in that file's One Single Line, replacing $dir with the full directory path that this *.go-buildrun* text file resides in.
 
 
 IF the command-line argument **-d** is specified, the package is not a main-package AND contains a *doc.go* source file, then upon successful build **godoc** is run to generate a single **yourfilename** (whatever was specified for **-d**, I like to use **doc.html**) single-page package-documentation HTML file in the package directory.
