@@ -130,15 +130,18 @@ func main() {
 				if rawBytes, err = ioutil.ReadFile(filepath.Join(dp, fi.Name())); err != nil {
 					panic(err)
 				}
-				cmdRunPath = strings.Replace(strings.Trim(string(rawBytes), " \t\r\n"), "$dir", dp, -1)
-				log.Printf("RUN: %s\n", cmdRunPath)
-				cmdArgs = strings.Split(cmdRunPath, " ")
-				rawBytes, err = exec.Command(cmdArgs[0], cmdArgs[1:]...).CombinedOutput()
-				if len(rawBytes) > 0 {
-					fmt.Printf("%s", string(rawBytes))
-				}
-				if err != nil {
-					panic(err)
+				for _, cmdRunPath := range strings.Split(string(rawBytes), "\n") {
+					if cmdRunPath = strings.Replace(strings.Trim(cmdRunPath, " \t\r\n"), "$dir", dp, -1); (len(cmdRunPath) > 0) && !(strings.HasPrefix(cmdRunPath, "#") || strings.HasPrefix(cmdRunPath, "//")) {
+						log.Printf("RUN: %s\n", cmdRunPath)
+						cmdArgs = strings.Split(cmdRunPath, " ")
+						rawBytes, err = exec.Command(cmdArgs[0], cmdArgs[1:]...).CombinedOutput()
+						if len(rawBytes) > 0 {
+							fmt.Printf("%s", string(rawBytes))
+						}
+						if err != nil {
+							log.Printf("ERR: %v", err)
+						}
+					}
 				}
 			}
 		}
