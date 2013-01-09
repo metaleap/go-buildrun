@@ -119,6 +119,10 @@ func main() {
 	origFilePath = *flagFilePath
 	isMainPkg = checkForMainPackage(origFilePath)
 	hasDocGoFile = processTemplates(filepath.Dir(origFilePath))
+	if pos := strings.Index(goPath, string(os.PathListSeparator)); pos > 0 {
+		goPath = goPath[:pos]
+		fmt.Printf("Your GOPATH contains multiple paths, using %v.\n", goPath)
+	}
 	goInstPath = strings.Replace(origFilePath[len(filepath.Join(goPath, "src")+pathSep):], pathSep, "/", -1)
 	goInstPath = goInstPath[0:strings.LastIndex(goInstPath, "/")]
 	for dp := filepath.Dir(origFilePath); len(dp) > len(goPath); dp = filepath.Dir(dp) {
