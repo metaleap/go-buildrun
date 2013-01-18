@@ -8,7 +8,6 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"runtime"
 	"strings"
 	"time"
 )
@@ -27,15 +26,50 @@ func checkForMainPackage(filePath string) bool {
 	return false
 }
 
-func processTemplates(dirPath string) (hasDocGoFile bool) {
-	const begin, end, pkg = "//#begin-gt", "//#end-gt", "package gt\n"
+func processTemplateConsumer(fp string, templates map[string]string, errChan chan error) {
+	const begin, end = "//#begin-gt", "//#end-gt"
 	var (
+		err                                           error
 		rawBytes                                      []byte
-		orig, cur, curBefore, curLine, curAfter, tmpl string
+		parts, repl                                   []string
 		posBegin, posEnd, posCrlf                     int
-		parts, repl, goFilePaths                      []string
-		templates                                     = map[string]string{}
-		fileInfos, err                                = ioutil.ReadDir(dirPath)
+		orig, cur, curBefore, curLine, curAfter, tmpl string
+	)
+	if rawBytes, err = ioutil.ReadFile(fp); err == nil {
+		orig = string(rawBytes)
+		cur = orig
+		if posBegin, posEnd = strings.Index(cur, begin), strings.Index(cur, end); (posBegin > -1) && (posEnd > (posBegin + len(begin))) {
+			if posCrlf = posBegin + strings.Index(cur[posBegin:], "\n"); posCrlf > posBegin {
+				curBefore, curAfter, curLine = cur[:posBegin], cur[posEnd:], cur[posBegin:posCrlf]
+				if parts = strings.Split(curLine, " "); len(parts) > 1 {
+					if tmpl = templates[parts[1]]; len(tmpl) == 0 {
+						tmpl = fmt.Sprintf("\nTEMPLATE NOT FOUND: %s\n", parts[1])
+					}
+					for _, rp := range parts[2:] {
+						if repl = strings.Split(rp, ":"); len(repl) > 1 {
+							tmpl = strings.Replace(tmpl, "__"+repl[0]+"__", repl[1], -1)
+						}
+					}
+					cur = curBefore + curLine + tmpl + curAfter
+				}
+			}
+		}
+		if cur != orig {
+			err = ioutil.WriteFile(fp, []byte(cur), os.ModePerm)
+		}
+	}
+	errChan <- err
+}
+
+func processTemplates(dirPath string) (hasDocGoFile bool) {
+	const pkg = "package gt\n"
+	var (
+		rawBytes       []byte
+		tmpl           string
+		pos            int
+		goFilePaths    []string
+		templates      = map[string]string{}
+		fileInfos, err = ioutil.ReadDir(dirPath)
 	)
 	if err != nil {
 		panic(err)
@@ -49,7 +83,7 @@ func processTemplates(dirPath string) (hasDocGoFile bool) {
 					panic(err)
 				}
 				tmpl = string(rawBytes)
-				if posBegin = strings.Index(tmpl, pkg); posBegin >= 0 {
+				if pos = strings.Index(tmpl, pkg); pos >= 0 {
 					tmpl = tmpl[len(pkg):]
 				}
 				templates[fi.Name()] = "\n" + tmpl + "\n"
@@ -59,30 +93,14 @@ func processTemplates(dirPath string) (hasDocGoFile bool) {
 		}
 	}
 	if len(templates) > 0 {
+		numFiles := len(goFilePaths)
+		errChan := make(chan error)
 		for _, fp := range goFilePaths {
-			if rawBytes, err = ioutil.ReadFile(fp); err != nil {
+			go processTemplateConsumer(fp, templates, errChan)
+		}
+		for i := 0; i < numFiles; i++ {
+			if err = <-errChan; err != nil {
 				panic(err)
-			}
-			orig = string(rawBytes)
-			cur = orig
-			if posBegin, posEnd = strings.Index(cur, begin), strings.Index(cur, end); (posBegin > -1) && (posEnd > (posBegin + len(begin))) {
-				if posCrlf = posBegin + strings.Index(cur[posBegin:], "\n"); posCrlf > posBegin {
-					curBefore, curAfter, curLine = cur[:posBegin], cur[posEnd:], cur[posBegin:posCrlf]
-					if parts = strings.Split(curLine, " "); len(parts) > 1 {
-						if tmpl = templates[parts[1]]; len(tmpl) == 0 {
-							tmpl = fmt.Sprintf("\nTEMPLATE NOT FOUND: %s\n", parts[1])
-						}
-						for _, rp := range parts[2:] {
-							if repl = strings.Split(rp, ":"); len(repl) > 1 {
-								tmpl = strings.Replace(tmpl, "__"+repl[0]+"__", repl[1], -1)
-							}
-						}
-						cur = curBefore + curLine + tmpl + curAfter
-					}
-				}
-			}
-			if cur != orig {
-				ioutil.WriteFile(fp, []byte(cur), os.ModePerm)
 			}
 		}
 	}
@@ -114,7 +132,6 @@ func main() {
 		dirFiles                 []os.FileInfo
 		cmdArgs                  []string
 	)
-	runtime.LockOSThread()
 	flag.Parse()
 	origFilePath = *flagFilePath
 	isMainPkg = checkForMainPackage(origFilePath)
@@ -161,7 +178,7 @@ func main() {
 		fmt.Printf("%+v\n", err)
 	}
 	if allowRun && (hasDocGoFile || strings.Contains(goInstPath, "metaleap/go-xsd-pkg")) && (!isMainPkg) && (len(*flagGenDocHtml) > 0) {
-		var docTemplate = `<html>
+		docTemplate := `<html>
 	<head>
 		<title>Package %s</title>
 		<meta charset="UTF-8" />
