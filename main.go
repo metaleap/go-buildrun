@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"time"
 )
@@ -132,6 +133,7 @@ func main() {
 		dirFiles                 []os.FileInfo
 		cmdArgs                  []string
 	)
+	runtime.GOMAXPROCS(runtime.NumCPU())
 	flag.Parse()
 	origFilePath = *flagFilePath
 	isMainPkg = checkForMainPackage(origFilePath)
