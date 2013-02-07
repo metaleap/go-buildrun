@@ -50,4 +50,7 @@ The .gt.go **template consumer file** is a normal Go source file that can design
     var myObjs = MyObjectSlice {}
 
 
+To repeatedly apply a template N times with N different __placeholder__ values, you separate them with a separator of your choice and declare the separator on the same **//#begin-gt** line with a **GT_MULT_SEP** [as demonstrated here](https://github.com/go3d/go-opengl/blob/master/util/render-states.gt.go#L56).
+
+
 That's it. Every time the package is re-built with *go-buildrun*, all **#begin-gt ... #end-gt** portions in all .gt.go source files are regenerated from the .gt template-file and replacement-parameters specified in their **#begin-gt** directive.
