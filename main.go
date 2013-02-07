@@ -15,7 +15,7 @@ import (
 
 func checkForMainPackage(filePath string) bool {
 	if strings.Index(filePath, "go-buildrun") >= 0 {
-		panic("go-buildrun tool cannot build itself!")
+		panic("go-buildrun tool refuses file paths containing 'go-buildrun'...")
 	}
 	if rawBytes, err := ioutil.ReadFile(filePath); err == nil {
 		if tmp := string(rawBytes); strings.HasPrefix(tmp, "package main\n") || strings.HasPrefix(tmp, "package main\r") || strings.Contains(tmp, "\npackage main\n") || strings.Contains(tmp, "\npackage main\r") {
@@ -28,13 +28,13 @@ func checkForMainPackage(filePath string) bool {
 }
 
 func processTemplateConsumer(fp string, templates map[string]string, errChan chan error) {
-	const begin, end = "//#begin-gt", "//#end-gt"
+	const begin, end, multSepDef = "//#begin-gt", "//#end-gt", "GT_MULT_SEP:"
 	var (
-		err                                           error
-		rawBytes                                      []byte
-		parts, repl                                   []string
-		posBegin, posEnd, posCrlf                     int
-		orig, cur, curBefore, curLine, curAfter, tmpl string
+		err                                                        error
+		rawBytes                                                   []byte
+		parts, repl, mult                                          []string
+		posBegin, posEnd, posCrlf                                  int
+		orig, cur, curBefore, curLine, curAfter, tmpl, multSep, rp string
 	)
 	if rawBytes, err = ioutil.ReadFile(fp); err == nil {
 		orig = string(rawBytes)
@@ -46,9 +46,39 @@ func processTemplateConsumer(fp string, templates map[string]string, errChan cha
 					if tmpl = templates[parts[1]]; len(tmpl) == 0 {
 						tmpl = fmt.Sprintf("\nTEMPLATE NOT FOUND: %s\n", parts[1])
 					}
-					for _, rp := range parts[2:] {
-						if repl = strings.Split(rp, ":"); len(repl) > 1 {
-							tmpl = strings.Replace(tmpl, "__"+repl[0]+"__", repl[1], -1)
+					startAt := 2
+					if strings.HasPrefix(parts[startAt], multSepDef) {
+						multSep = strings.Replace(parts[startAt], multSepDef, "", -1)
+						startAt++
+					}
+					if len(multSep) > 0 {
+						var (
+							multPass, multLoop int
+							multOut, multThis  string
+							multParts          = map[string][]string{}
+						)
+						for _, rp = range parts[startAt:] {
+							if repl = strings.Split(rp, ":"); len(repl) > 1 {
+								multParts[repl[0]] = strings.Split(repl[1], multSep)
+								if multLoop == 0 || multLoop > len(multParts[repl[0]]) {
+									multLoop = len(multParts[repl[0]])
+								}
+							}
+						}
+						for multPass < multLoop {
+							multThis = tmpl
+							for rp, mult = range multParts {
+								multThis = strings.Replace(multThis, "__"+rp+"__", mult[multPass], -1)
+							}
+							multOut += multThis
+							multPass++
+						}
+						tmpl = multOut
+					} else {
+						for _, rp = range parts[startAt:] {
+							if repl = strings.Split(rp, ":"); len(repl) > 1 {
+								tmpl = strings.Replace(tmpl, "__"+repl[0]+"__", repl[1], -1)
+							}
 						}
 					}
 					cur = curBefore + curLine + tmpl + curAfter
