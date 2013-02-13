@@ -15,8 +15,12 @@ However, **prior** to invoking "go install":
 
 - IF the package directory, or any of its ancestor directories (up to but not including $GOPATH), or both/some/all, contains any *.go-buildrun* text files, then for each such file, it executes the commands-with-args specified in that file's individual lines, replacing in each $dir with the full directory path that this *.go-buildrun* text file resides in.
 
+Upon successful "go install":
 
-IF the command-line argument **-d** is specified, the package is not a main-package AND contains a *doc.go* source file, then upon successful build **godoc** is run to generate a single **yourfilename** (whatever was specified for **-d**, I like to use **doc.html**) single-page package-documentation HTML file in the package directory.
+- **go vet** is run against the package and its output printed
+
+- IF the command-line argument **-d** is specified, the package is not a main-package AND contains a *doc.go* source file, then **godoc** is run to generate a single **yourfilename** (whatever was specified for **-d**, I like to use **doc.html**) single-page package-documentation HTML file in the package directory.
+
 
 
 Templating
