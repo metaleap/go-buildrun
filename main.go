@@ -238,6 +238,12 @@ func main() {
 			log.Printf("DOC file write error: %v\n", err)
 		}
 	}
+	log.Printf("RUN: go vet %s", goInstPath)
+	if rawBytes, err = exec.Command("go", "vet", goInstPath).CombinedOutput(); err != nil {
+		log.Printf("GOVET error: %v\n", err)
+	} else if len(rawBytes) > 0 {
+		fmt.Printf("%s\n", string(rawBytes))
+	}
 	log.Printf("TOTAL BUILD TIME: %v\n", time.Now().Sub(startTime))
 	if allowRun && isMainPkg {
 		cmdRunPath = filepath.Join(goPath, "bin", goInstPath[strings.LastIndex(goInstPath, "/")+1:])
