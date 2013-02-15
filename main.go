@@ -153,6 +153,7 @@ func main() {
 		pathSep                  = string(os.PathSeparator)
 		flagFilePath             = flag.String("f", "", "Full path to current .go source file from which to build (go install) package.")
 		flagGenDocHtml           = flag.String("d", "", "Specify a file name such as doc.html to generate single-page package-doc in package directory; omit to not generate this.")
+		flagVet                  = flag.Bool("v", false, "run go vet?")
 		goInstPath               string
 		goPath                   = os.ExpandEnv("$GOPATH")
 		isMainPkg, hasDocGoFile  bool
@@ -238,11 +239,13 @@ func main() {
 			log.Printf("DOC file write error: %v\n", err)
 		}
 	}
-	log.Printf("RUN: go vet %s", goInstPath)
-	if rawBytes, err = exec.Command("go", "vet", goInstPath).CombinedOutput(); err != nil {
-		log.Printf("GOVET error: %v\n", err)
-	} else if len(rawBytes) > 0 {
-		fmt.Printf("%s\n", string(rawBytes))
+	if *flagVet {
+		log.Printf("RUN: go vet %s", goInstPath)
+		if rawBytes, err = exec.Command("go", "vet", goInstPath).CombinedOutput(); err != nil {
+			log.Printf("GOVET error: %v\n", err)
+		} else if len(rawBytes) > 0 {
+			fmt.Printf("%s\n", string(rawBytes))
+		}
 	}
 	log.Printf("TOTAL BUILD TIME: %v\n", time.Now().Sub(startTime))
 	if allowRun && isMainPkg {
