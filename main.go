@@ -18,7 +18,7 @@ func checkForMainPackage(filePath string) bool {
 		panic("go-buildrun tool refuses file paths containing 'go-buildrun'...")
 	}
 	if rawBytes, err := ioutil.ReadFile(filePath); err == nil {
-		if tmp := string(rawBytes); strings.HasPrefix(tmp, "package main\n") || strings.HasPrefix(tmp, "package main\r") || strings.Contains(tmp, "\npackage main\n") || strings.Contains(tmp, "\npackage main\r") {
+		if tmp := string(rawBytes); (!strings.Contains(tmp, "ListenAndServe")) && (strings.HasPrefix(tmp, "package main\n") || strings.HasPrefix(tmp, "package main\r") || strings.Contains(tmp, "\npackage main\n") || strings.Contains(tmp, "\npackage main\r")) {
 			return true
 		}
 	} else {
