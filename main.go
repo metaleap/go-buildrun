@@ -11,6 +11,8 @@ import (
 	"runtime"
 	"strings"
 	"time"
+
+	"github.com/howeyc/fsnotify"
 )
 
 func checkForMainPackage(filePath string) bool {
@@ -18,7 +20,7 @@ func checkForMainPackage(filePath string) bool {
 		panic("go-buildrun tool refuses file paths containing 'go-buildrun'...")
 	}
 	if rawBytes, err := ioutil.ReadFile(filePath); err == nil {
-		if tmp := string(rawBytes); (!strings.Contains(tmp, "ListenAndServe")) && (strings.HasPrefix(tmp, "package main\n") || strings.HasPrefix(tmp, "package main\r") || strings.Contains(tmp, "\npackage main\n") || strings.Contains(tmp, "\npackage main\r")) {
+		if tmp := string(rawBytes); (!strings.Contains(tmp, "LxistenAndServe")) && (strings.HasPrefix(tmp, "package main\n") || strings.HasPrefix(tmp, "package main\r") || strings.Contains(tmp, "\npackage main\n") || strings.Contains(tmp, "\npackage main\r")) {
 			return true
 		}
 	} else {
@@ -168,14 +170,15 @@ func main() {
 	flag.Parse()
 	origFilePath = *flagFilePath
 	isMainPkg = checkForMainPackage(origFilePath)
-	hasDocGoFile = processTemplates(filepath.Dir(origFilePath))
+	origDirPath := filepath.Dir(origFilePath)
+	hasDocGoFile = processTemplates(origDirPath)
 	if pos := strings.Index(goPath, string(os.PathListSeparator)); pos > 0 {
 		goPath = goPath[:pos]
 		fmt.Printf("Your GOPATH contains multiple paths, using %v.\n", goPath)
 	}
 	goInstPath = strings.Replace(origFilePath[len(filepath.Join(goPath, "src")+pathSep):], pathSep, "/", -1)
 	goInstPath = goInstPath[0:strings.LastIndex(goInstPath, "/")]
-	for dp := filepath.Dir(origFilePath); len(dp) > len(goPath); dp = filepath.Dir(dp) {
+	for dp := origDirPath; len(dp) > len(goPath); dp = filepath.Dir(dp) {
 		if dirFiles, err = ioutil.ReadDir(dp); err != nil {
 			panic(err)
 		}
@@ -186,21 +189,21 @@ func main() {
 				}
 				for _, cmdRunPath := range strings.Split(string(rawBytes), "\n") {
 					if cmdRunPath = strings.Replace(strings.Trim(cmdRunPath, " \t\r\n"), "$dir", dp, -1); (len(cmdRunPath) > 0) && !(strings.HasPrefix(cmdRunPath, "#") || strings.HasPrefix(cmdRunPath, "//")) {
-						log.Printf("RUN: %s\n", cmdRunPath)
+						log.Printf("[RUN]\t%s\n", cmdRunPath)
 						cmdArgs = strings.Split(cmdRunPath, " ")
 						rawBytes, err = exec.Command(cmdArgs[0], cmdArgs[1:]...).CombinedOutput()
 						if len(rawBytes) > 0 {
 							fmt.Printf("%s", string(rawBytes))
 						}
 						if err != nil {
-							log.Printf("ERR: %v", err)
+							log.Printf("[ERR]\t%v", err)
 						}
 					}
 				}
 			}
 		}
 	}
-	log.Printf("RUN: go install %s\n", goInstPath)
+	log.Printf("[RUN]\tgo install %s\n", goInstPath)
 	rawBytes, err = exec.Command("go", "install", goInstPath).CombinedOutput()
 	if len(rawBytes) > 0 {
 		allowRun = false
@@ -229,20 +232,20 @@ func main() {
 		</div></div>
 	</body>
 </html>`
-		log.Printf("RUN: godoc -html=true %s\n", goInstPath)
+		log.Printf("[RUN]\tgodoc -html=true %s\n", goInstPath)
 		// if rawBytes, err = ioutil.ReadFile(filepath.Join(goPath, "src/github.com/metaleap/go-buildrun/doctemplate.html")); (err == nil) && (len(rawBytes) > 0) {
 		// 	docTemplate = string(rawBytes)
 		// }
 		if rawBytes, err = exec.Command("godoc", "-html=true", goInstPath).CombinedOutput(); err != nil {
-			log.Printf("GODOC error: %v\n", err)
-		} else if err = ioutil.WriteFile(filepath.Join(filepath.Dir(origFilePath), *flagGenDocHtml), []byte(fmt.Sprintf(docTemplate, goInstPath, goInstPath, string(rawBytes))), os.ModePerm); err != nil {
-			log.Printf("DOC file write error: %v\n", err)
+			log.Printf("[GODOC]\terror: %v\n", err)
+		} else if err = ioutil.WriteFile(filepath.Join(origDirPath, *flagGenDocHtml), []byte(fmt.Sprintf(docTemplate, goInstPath, goInstPath, string(rawBytes))), os.ModePerm); err != nil {
+			log.Printf("[DOC]\tfile write error: %v\n", err)
 		}
 	}
 	if *flagVet {
-		log.Printf("RUN: go vet %s", goInstPath)
+		log.Printf("[RUN]\tgo vet %s", goInstPath)
 		if rawBytes, err = exec.Command("go", "vet", goInstPath).CombinedOutput(); err != nil {
-			log.Printf("GOVET error: %v\n", err)
+			log.Printf("[GOVET]\terror: %v\n", err)
 		} else if len(rawBytes) > 0 {
 			fmt.Printf("%s\n", string(rawBytes))
 		}
@@ -250,13 +253,38 @@ func main() {
 	log.Printf("TOTAL BUILD TIME: %v\n", time.Now().Sub(startTime))
 	if allowRun && isMainPkg {
 		cmdRunPath = filepath.Join(goPath, "bin", goInstPath[strings.LastIndex(goInstPath, "/")+1:])
-		log.Printf("RUN: %s\n%s\n\n", cmdRunPath, strings.Repeat("_", 25+len(cmdRunPath)))
-		rawBytes, err = exec.Command(cmdRunPath).CombinedOutput()
-		if len(rawBytes) > 0 {
-			fmt.Printf("%s\n", trimLines(string(rawBytes), 10))
+		log.Printf("[RUN]\t%s\t\t(in %s)\n%s\n\n", cmdRunPath, origDirPath, strings.Repeat("_", 28+len(cmdRunPath)))
+		var watch *fsnotify.Watcher
+		if watch, err = fsnotify.NewWatcher(); err == nil {
+			if err = watch.Watch(origDirPath); err == nil {
+				defer watch.Close()
+				cmd := exec.Command(cmdRunPath)
+				cmd.Dir = origDirPath
+				cmd.Stderr = os.Stderr
+				cmd.Stdout = os.Stdout
+				cmd.Stdin = os.Stdin
+				go func() {
+					for {
+						select {
+						case evt := <-watch.Event:
+							if evt != nil && strings.HasSuffix(strings.ToLower(evt.Name), ".go") && cmd.Process != nil {
+								log.Printf("[WATCH]\tchange: %s", evt.Name)
+								cmd.Process.Kill()
+								break
+							}
+						case err = <-watch.Error:
+							if err != nil {
+								log.Printf("[WATCH]\terror: %s", err.Error())
+								break
+							}
+						}
+					}
+				}()
+				err = cmd.Run()
+			}
 		}
 		if err != nil {
-			log.Printf("ERROR: %+v\n", err)
+			log.Printf("[ERROR]\t%+v\n", err)
 		}
 	}
 }
