@@ -12,7 +12,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/howeyc/fsnotify"
+	"github.com/goforks/fsnotify"
 )
 
 func checkForMainPackage(filePath string) bool {
