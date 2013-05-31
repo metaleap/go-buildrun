@@ -24,8 +24,7 @@ func checkForMainPackage(filePath string) bool {
 }
 
 func collectImports(dirPath string) {
-	fileInfos, err := ioutil.ReadDir(dirPath)
-	if err != nil {
+	if fileInfos, err := ioutil.ReadDir(dirPath); err != nil {
 		panic(err)
 	} else {
 		var (
@@ -43,10 +42,13 @@ func collectImports(dirPath string) {
 			if rawBytes, err = ioutil.ReadFile(filePath); err == nil {
 				src = string(rawBytes)
 				const needle = "import ("
+				//	find start of import clause
 				if pos1 = strings.Index(src, needle); pos1 > 0 {
 					src = src[pos1+len(needle):]
+					//	find end of import clause
 					if pos2 = strings.Index(src, ")"); pos2 > 0 {
 						src = src[:pos2]
+						//	for each import...
 						for _, ln = range strings.Split(src, "\n") {
 							if pos1 = strings.Index(ln, "\""); pos1 >= 0 {
 								ln = ln[pos1+1:]
