@@ -13,7 +13,7 @@ However, **prior** to invoking "go install":
 
 - IF the current package directory contains any **.gt** and **.gt.go** files, the tool applies those *.gt* template definitions to the *.gt.go* source files. See "Templating" section below.
 
-- IF the package directory, or any of its ancestor directories (up to but not including $GOPATH), or both/some/all, contains any *.go-buildrun* text files, then for each such file, it executes the commands-with-args specified in that file's individual lines, replacing in each $dir with the full directory path that this *.go-buildrun* text file resides in.
+- IF the package directory, or any of its ancestor directories (up to but not including $GOPATH), or both/some/all, contains any *.go-buildrun* text files, then for each such file, it executes the commands-with-args specified in that file's individual lines, replacing in each $dir with the full directory path that this *.go-buildrun* text file resides in (and otherwise expanding ${var} or $var occurrences as per os.ExpandEnv).
 
 Upon successful "go install":
 

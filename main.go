@@ -149,9 +149,12 @@ func runPrebuildCommands() {
 					panic(err)
 				}
 				for _, cmdRunPath := range strings.Split(string(rawBytes), "\n") {
-					if cmdRunPath = strings.Replace(strings.Trim(cmdRunPath, " \t\r\n"), "$dir", dp, -1); (len(cmdRunPath) > 0) && !(strings.HasPrefix(cmdRunPath, "#") || strings.HasPrefix(cmdRunPath, "//")) {
+					if cmdRunPath = os.ExpandEnv(strings.Replace(strings.Trim(cmdRunPath, " \t\r\n"), "$dir", dp, -1)); (len(cmdRunPath) > 0) && !(strings.HasPrefix(cmdRunPath, "#") || strings.HasPrefix(cmdRunPath, "//")) {
 						log.Printf("[RUN]\t%s\n", cmdRunPath)
 						cmdArgs = strings.Split(cmdRunPath, " ")
+						if cmdArgs[0] == "start" && runtime.GOOS == "windows" {
+							cmdArgs = append([]string{"cmd", "/C"}, cmdArgs...)
+						}
 						rawBytes, err = exec.Command(cmdArgs[0], cmdArgs[1:]...).CombinedOutput()
 						if len(rawBytes) > 0 {
 							fmt.Printf("%s", string(rawBytes))
