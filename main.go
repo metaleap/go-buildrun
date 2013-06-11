@@ -144,7 +144,7 @@ func runPrebuildCommands() {
 			panic(err)
 		}
 		for _, fi := range dirFiles {
-			if (!fi.IsDir()) && strings.HasSuffix(fi.Name(), ".go-buildrun") {
+			if (!fi.IsDir()) && (strings.HasSuffix(fi.Name(), ".go-prebuild") || strings.HasSuffix(fi.Name(), ".go-buildrun")) {
 				if rawBytes, err = ioutil.ReadFile(filepath.Join(dp, fi.Name())); err != nil {
 					panic(err)
 				}
