@@ -176,7 +176,7 @@ func main() {
 		flagGenDocHtml = flag.String("d", "", "Specify a file name such as doc.html to generate single-page package-doc in package directory; omit to not generate this.")
 		flagVet        = flag.Bool("v", false, "run go vet?")
 	)
-	runtime.GOMAXPROCS(runtime.NumCPU())
+	runtime.GOMAXPROCS(2 * runtime.NumCPU())
 	flag.Parse()
 	origFilePath = *flagFilePath
 	origDirPath = filepath.Dir(origFilePath)
