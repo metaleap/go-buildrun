@@ -12,7 +12,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/howeyc/fsnotify"
+	"github.com/go-forks/fsnotify"
 )
 
 func trimLines(str string, maxLines int) string {
@@ -149,7 +149,7 @@ func runPrebuildCommands() {
 					panic(err)
 				}
 				for _, cmdRunPath := range strings.Split(string(rawBytes), "\n") {
-					if cmdRunPath = os.ExpandEnv(strings.Replace(strings.Trim(cmdRunPath, " \t\r\n"), "$dir", dp, -1)); (len(cmdRunPath) > 0) && !(strings.HasPrefix(cmdRunPath, "#") || strings.HasPrefix(cmdRunPath, "//")) {
+					if cmdRunPath = os.ExpandEnv(strings.Replace(strings.TrimSpace(cmdRunPath), "$dir", dp, -1)); (len(cmdRunPath) > 0) && !(strings.HasPrefix(cmdRunPath, "#") || strings.HasPrefix(cmdRunPath, "//")) {
 						log.Printf("[RUN]\t%s\n", cmdRunPath)
 						cmdArgs = strings.Split(cmdRunPath, " ")
 						if cmdArgs[0] == "start" && runtime.GOOS == "windows" {

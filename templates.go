@@ -22,7 +22,7 @@ func processTemplateConsumer(fp string, templates map[string]string, errChan cha
 		cur = orig
 		if posBegin, posEnd = strings.Index(cur, begin), strings.Index(cur, end); (posBegin > -1) && (posEnd > (posBegin + len(begin))) {
 			if posCrlf = posBegin + strings.Index(cur[posBegin:], "\n"); posCrlf > posBegin {
-				curBefore, curAfter, curLine = cur[:posBegin], cur[posEnd:], cur[posBegin:posCrlf]
+				curBefore, curAfter, curLine = cur[:posBegin], cur[posEnd:], strings.TrimSpace(cur[posBegin:posCrlf])
 				if parts = strings.Split(curLine, " "); len(parts) > 1 {
 					if tmpl = templates[parts[1]]; len(tmpl) == 0 {
 						tmpl = fmt.Sprintf("\nTEMPLATE NOT FOUND: %s\n", parts[1])
@@ -62,7 +62,7 @@ func processTemplateConsumer(fp string, templates map[string]string, errChan cha
 							}
 						}
 					}
-					cur = curBefore + curLine + tmpl + curAfter
+					cur = curBefore + "\n" + curLine + "\n" + tmpl + "\n" + curAfter
 				}
 			}
 		}
@@ -74,7 +74,6 @@ func processTemplateConsumer(fp string, templates map[string]string, errChan cha
 }
 
 func processTemplates(dirPath string) (hasDocGoFile bool) {
-	const pkg = "package gt\n"
 	var (
 		rawBytes       []byte
 		tmpl           string
@@ -95,10 +94,12 @@ func processTemplates(dirPath string) (hasDocGoFile bool) {
 					panic(err)
 				}
 				tmpl = string(rawBytes)
+				const pkg = "package "
 				if pos = strings.Index(tmpl, pkg); pos >= 0 {
 					tmpl = tmpl[len(pkg):]
+					tmpl = tmpl[strings.Index(tmpl, "\n")+1:]
 				}
-				templates[fi.Name()] = "\n" + tmpl + "\n"
+				templates[fi.Name()] = "\n" + strings.TrimSpace(tmpl) + "\n"
 			} else if strings.ToLower(fi.Name()) == "doc.go" {
 				hasDocGoFile = true
 			}
