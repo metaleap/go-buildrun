@@ -62,7 +62,7 @@ func processTemplateConsumer(fp string, templates map[string]string, errChan cha
 							}
 						}
 					}
-					cur = curBefore + "\n" + curLine + "\n" + tmpl + "\n" + curAfter
+					cur = curBefore + curLine + "\n" + tmpl + "\n" + curAfter
 				}
 			}
 		}
