@@ -12,7 +12,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/howeyc/fsnotify"
+	"github.com/go-forks/fsnotify"
 )
 
 func trimLines(str string, maxLines int) string {
