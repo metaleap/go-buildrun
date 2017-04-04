@@ -16,7 +16,6 @@ import (
 )
 
 func trimLines(str string, maxLines int) string {
-	return str
 	var lines = strings.Split(str, "\n")
 	if len(lines) > maxLines {
 		lines = lines[0:maxLines]
